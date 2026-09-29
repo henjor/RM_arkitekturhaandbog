@@ -140,16 +140,17 @@ table.doc{font-size:13px;margin-top:10px}
 .btn.small{font-size:14px;padding:6px 10px}
 .btn:disabled{opacity:.45;cursor:default}
 .selnote{position:fixed;right:16px;bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:30;font:inherit;font-size:15px;font-weight:600;padding:12px 16px;border-radius:24px;border:none;background:var(--rod);color:#fff;box-shadow:0 4px 14px rgba(0,0,0,.25);cursor:pointer}
-dialog{border:none;border-radius:8px;padding:0;width:min(560px,calc(100vw - 24px));max-height:calc(100vh - 40px);background:var(--bg);color:var(--ink);box-shadow:0 10px 40px rgba(0,0,0,.35)}
-dialog::backdrop{background:rgba(0,0,0,.45)}
-dialog form{padding:20px 20px calc(18px + env(safe-area-inset-bottom,0px))}
-dialog h2{margin:0 0 4px;font-size:21px}
-dialog .ctx{margin:0 0 14px;color:var(--muted);font-size:14px}
+.noteform{border:2px solid var(--accent);border-radius:8px;background:var(--bg);margin:6px 0 24px}
+.noteform form{padding:16px 16px 14px}
+.noteform h2{margin:0 0 2px !important;font-size:20px !important}
+.noteform .ctx{margin:0 0 12px;color:var(--muted);font-size:14px}
+.noteform .namerow{font-size:14px;color:var(--muted);margin:0 0 14px}
+.noteform .namerow button{font:inherit;font-size:14px;background:none;border:none;color:var(--accent);text-decoration:underline;cursor:pointer;padding:0}
 .types{border:none;padding:0;margin:0 0 14px;display:flex;flex-wrap:wrap;gap:8px 18px}
 .types legend{font-weight:600;font-size:15px;margin-bottom:6px;padding:0}
 .types label{display:flex;align-items:center;gap:6px;font-size:16px}
 .fl{display:block;font-weight:600;font-size:15px;margin:0 0 4px}
-dialog textarea,.namein{width:100%;font:inherit;font-size:16px;padding:9px 11px;border:1px solid var(--rule);border-radius:6px;background:var(--surface);color:var(--ink);margin:0 0 14px;resize:vertical}
+textarea,.namein{width:100%;font:inherit;font-size:16px;padding:9px 11px;border:1px solid var(--rule);border-radius:6px;background:var(--surface);color:var(--ink);margin:0 0 14px;resize:vertical}
 .err{color:var(--accent);font-size:14px;margin:-8px 0 12px}
 .acts{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
 .nlist{list-style:none;padding:0;margin:14px 0 20px}
@@ -224,7 +225,10 @@ footer{color:var(--muted);font-size:13px;margin-top:60px;max-width:72ch}
   .heroart svg{max-width:260px}
   .brand .logo{width:30px;height:30px}
   .brand b{font-size:17px}
-  .brand{gap:7px;min-width:0}
+  .brand{gap:7px;min-width:0;flex:1 1 auto;overflow:hidden}
+  .brand .bt{min-width:0}
+  .brand b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+  .notes{flex:0 0 auto}
   .topin > .menu{padding:7px 10px}
   .theme{display:none}
 }
@@ -248,23 +252,24 @@ footer{color:var(--muted);font-size:13px;margin-top:60px;max-width:72ch}
   <main id="main" tabindex="-1"></main>
 </div>
 <button class="selnote" id="selnote" type="button" hidden>✎ Bemærkning til markeringen</button>
-<dialog id="dlg" aria-labelledby="dlgt">
-  <form method="dialog" id="dlgform">
-    <h2 id="dlgt">Bemærkning</h2>
+<section class="noteform" id="dlg" hidden aria-labelledby="dlgt">
+  <form id="dlgform" novalidate>
+    <h2 id="dlgt">Ny bemærkning</h2>
     <p class="ctx" id="dlgctx"></p>
+    <label class="fl" for="dlgtxt">Din bemærkning</label>
+    <textarea id="dlgtxt" rows="5" placeholder="Hvad undrer du dig over, eller hvad foreslår du?"></textarea>
+    <p class="err" id="dlgerr" hidden>Skriv en bemærkning, før du gemmer.</p>
     <fieldset class="types"><legend>Hvad drejer det sig om?</legend>
       <label><input type="radio" name="type" value="Uklart" checked> Uklart</label>
       <label><input type="radio" name="type" value="Fejl"> Fejl</label>
       <label><input type="radio" name="type" value="Forslag"> Forslag</label>
     </fieldset>
-    <label class="fl" for="dlgcit">Citat fra teksten (valgfrit)</label>
-    <textarea id="dlgcit" rows="2"></textarea>
-    <label class="fl" for="dlgtxt">Din bemærkning</label>
-    <textarea id="dlgtxt" rows="5" required></textarea>
-    <p class="err" id="dlgerr" hidden>Skriv en bemærkning, før du gemmer.</p>
-    <div class="acts"><button type="button" class="btn ghost" id="dlgcancel">Annullér</button><button type="submit" class="btn" id="dlgsave">Gem på telefonen</button></div>
+    <div id="dlgcitwrap"><label class="fl" for="dlgcit">Citat fra teksten</label>
+    <textarea id="dlgcit" rows="2"></textarea></div>
+    <div id="dlgname"></div>
+    <div class="acts"><button type="button" class="btn ghost" id="dlgcancel">Annullér</button><button type="submit" class="btn" id="dlgsave">Gem bemærkning</button></div>
   </form>
-</dialog>
+</section>
 <template id="herosvg"><svg xmlns="http://www.w3.org/2000/svg" viewBox="30 98 684 684" role="img" aria-labelledby="hero-t"><title id="hero-t">Arkitekturtrekanten: Processer, Information/Data og It-understøttelse omgivet af ringene Sikkerhed, Jura, Strategi og Styring, med økonomi som stiplet linje gennem alle lag</title><circle cx="372" cy="440" r="338" fill="#888886" stroke="none" stroke-width="0"/>
   <circle cx="372" cy="440" r="265" fill="#5B7FC4" stroke="none" stroke-width="0"/>
   <circle cx="372" cy="440" r="226" fill="#3A5FA0" stroke="none" stroke-width="0"/>
@@ -422,7 +427,7 @@ function highlight(root, ts){
 /* Routing */
 function route(){
   if (document.body.classList.contains('navopen')) setNav(false);
-  selBtn.hidden = true;
+  park(); selBtn.hidden = true;
   const h = decodeURIComponent(location.hash.slice(1) || '/');
   const [path, qs] = h.split('?q=');
   const p = path.split('/').filter(Boolean);
@@ -515,16 +520,13 @@ function welcome(){
     <p>Når du er klar, trykker du på <strong>Send bemærkninger</strong> under ✎ Bemærkninger. Vælg Outlook eller Mail, så ligger dine bemærkninger som vedhæftet fil i en ny mail.</p>
     <p class="sendbox">Modtagerfeltet er tomt. <span class="who">Send mailen til Henrik Hammer Jordt</span>, Området for Arkitektur. Bemærkningerne indgår i den løbende revision af håndbogen.</p>
 
-    <h2>Dit navn</h2>
-    <p>Navnet følger med dine bemærkninger, så vi kan spørge ind, hvis noget skal uddybes.</p>
-    <label class="fl" for="wname">Navn</label>
-    <input class="namein" id="wname" type="text" autocomplete="name" value="${name}" placeholder="Fornavn og efternavn">
-
+    <p style="margin-top:28px"><label class="fl" for="wname">Dit navn <span style="font-weight:400;color:var(--muted)">(valgfrit, du kan også skrive det sammen med din første bemærkning)</span></label>
+    <input class="namein" id="wname" type="text" autocomplete="name" value="${name}" placeholder="Fornavn og efternavn"></p>
     <p><button type="button" class="btn" id="wgo">Gå til håndbogen</button></p>
     ${foot()}</div>`;
-  $('#wname').addEventListener('change', e => store.set(K_NAME, e.target.value.trim()));
+  $('#wname').addEventListener('change', e => { if (e.target.value.trim()) store.set(K_NAME, e.target.value.trim()); });
   $('#wgo').addEventListener('click', () => {
-    store.set(K_NAME, $('#wname').value.trim()); store.set(K_WELCOME, new Date().toISOString());
+    if ($('#wname').value.trim()) store.set(K_NAME, $('#wname').value.trim()); store.set(K_WELCOME, new Date().toISOString());
     const back = welcomeReturn && !/velkommen/.test(welcomeReturn) ? welcomeReturn : '#/';
     welcomeReturn = '';
     if (location.hash === back) route(); else location.hash = back;
@@ -546,34 +548,48 @@ main.addEventListener('click', e => { const b = e.target.closest('[data-note]');
 function currentSel(){ const s = document.getSelection(), body = $('#body'); const t = s ? s.toString().replace(/\s+/g,' ').trim() : ''; return (body && t && s.anchorNode && body.contains(s.anchorNode)) ? t.slice(0,600) : ''; }
 
 const dlg = $('#dlg'); let editing = null;
+function park(){ if (dlg.parentNode !== document.body) { dlg.hidden = true; document.body.appendChild(dlg); } }
+function nameRow(){
+  const nm = store.get(K_NAME) || '';
+  $('#dlgname').innerHTML = nm
+    ? `<p class="namerow">Skrives som <strong>${esc(nm)}</strong>. <button type="button" id="dlgnamechg">Ret navn</button></p>`
+    : `<label class="fl" for="dlgnm">Dit navn <span style="font-weight:400;color:var(--muted)">(valgfrit, huskes til næste gang)</span></label><input class="namein" id="dlgnm" type="text" autocomplete="name" placeholder="Fornavn og efternavn">`;
+  const b = $('#dlgnamechg'); if (b) b.addEventListener('click', () => { $('#dlgname').innerHTML = `<label class="fl" for="dlgnm">Dit navn</label><input class="namein" id="dlgnm" type="text" autocomplete="name" value="${esc(nm)}">`; $('#dlgnm').focus(); });
+}
 function openNote(secId, noteId, cit){
   const notes = loadNotes();
   const n = noteId ? notes.find(x => x.id === noteId) : null;
-  let ctx;
-  if (n) ctx = `Kapitel ${n.kapitel}, ${n.afsnitsnummer ? n.afsnitsnummer + ' ' : ''}${n.afsnitstitel}`;
-  else { const r = secById[secId]; if (!r) return; ctx = `Kapitel ${r.c.num}, ${r.s.num ? r.s.num + ' ' : ''}${r.s.title}`; }
+  let ctx, host;
+  if (n) { ctx = `Kapitel ${n.kapitel}, ${n.afsnitsnummer ? n.afsnitsnummer + ' ' : ''}${n.afsnitstitel}`; host = main.querySelector(`li[data-id="${n.id}"]`); }
+  else { const r = secById[secId]; if (!r) return; ctx = `Kapitel ${r.c.num}, ${r.s.num ? r.s.num + ' ' : ''}${r.s.title}`; host = main.querySelector('.notebar'); }
+  if (!host) return;
   editing = {secId, noteId};
   $('#dlgt').textContent = n ? 'Ret bemærkning' : 'Ny bemærkning';
   $('#dlgctx').textContent = ctx + ` (håndbog v${n ? n.haandbogsversion : M.version})`;
-  $('#dlgcit').value = n ? n.citat : (cit || '');
+  const c = n ? n.citat : (cit || '');
+  $('#dlgcit').value = c; $('#dlgcitwrap').hidden = !c;
   $('#dlgtxt').value = n ? n.bemaerkning : '';
   dlg.querySelectorAll('input[name=type]').forEach(r => r.checked = r.value === (n ? n.type : 'Uklart'));
   $('#dlgerr').hidden = true;
+  nameRow();
   selBtn.hidden = true;
-  if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
-  setTimeout(() => $('#dlgtxt').focus(), 50);
+  host.after(dlg); dlg.hidden = false;
+  dlg.style.scrollMarginTop = ($('.top').getBoundingClientRect().height + 12) + 'px';
+  dlg.scrollIntoView({block: 'start', behavior: 'smooth'});
+  setTimeout(() => $('#dlgtxt').focus({preventScroll: true}), 250);
 }
-function closeDlg(){ if (dlg.close) dlg.close(); else dlg.removeAttribute('open'); }
+function closeDlg(){ park(); }
 $('#dlgcancel').addEventListener('click', closeDlg);
 $('#dlgform').addEventListener('submit', e => {
   e.preventDefault();
   const txt = $('#dlgtxt').value.trim();
   if (!txt) { $('#dlgerr').hidden = false; $('#dlgtxt').focus(); return; }
+  const nmIn = $('#dlgnm'); if (nmIn && nmIn.value.trim()) store.set(K_NAME, nmIn.value.trim());
   const type = dlg.querySelector('input[name=type]:checked').value, cit = $('#dlgcit').value.trim();
   const notes = loadNotes(), now = new Date().toISOString();
   if (editing.noteId) {
     const n = notes.find(x => x.id === editing.noteId);
-    Object.assign(n, {type, citat: cit, bemaerkning: txt, rettet: now});
+    Object.assign(n, {type, citat: cit, bemaerkning: txt, rettet: now, navn: n.navn || store.get(K_NAME) || ''});
   } else {
     const {c, s} = secById[editing.secId];
     notes.push({id: newId(), navn: store.get(K_NAME) || '', oprettet: now, rettet: '', haandbogsversion: M.version,
@@ -606,10 +622,11 @@ function mailText(n){
     body: `Hej Henrik\n\nHer er ${n} ${n===1?'bemærkning':'bemærkninger'} til Arkitekturhåndbogen (version ${M.version}). Filen er vedhæftet.\n\nVenlig hilsen\n${nm}` };
 }
 function notesPage(){
+  park();
   buildNav(null);
   const notes = loadNotes().sort((a,b) => b.oprettet.localeCompare(a.oprettet));
   const unsent = notes.filter(x => !x.sendt), sent = notes.filter(x => x.sendt);
-  const item = n => `<li>
+  const item = n => `<li data-id="${n.id}">
       <div class="nh"><span class="ty">${esc(n.type)}</span><a href="#/s/${esc(n.afsnit_id)}">Kapitel ${n.kapitel}, ${n.afsnitsnummer ? esc(n.afsnitsnummer)+' ' : ''}${esc(n.afsnitstitel)}</a><span>v${esc(n.haandbogsversion)}, ${dk(n.oprettet)}</span><span class="st ${n.sendt?'sent':'new'}">${n.sendt ? 'Sendt ' + dk(n.sendt) : 'Ikke sendt'}</span></div>
       ${n.citat ? `<blockquote>${esc(n.citat)}</blockquote>` : ''}<p>${esc(n.bemaerkning)}</p>
       <div class="na"><button type="button" class="btn ghost small" data-edit="${n.id}">Ret</button><button type="button" class="btn ghost small" data-del="${n.id}">Slet</button></div></li>`;
