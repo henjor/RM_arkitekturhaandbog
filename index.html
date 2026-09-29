@@ -254,24 +254,7 @@ footer{color:var(--muted);font-size:13px;margin-top:60px;max-width:72ch}
   <main id="main" tabindex="-1"></main>
 </div>
 <button class="selnote" id="selnote" type="button" hidden>✎ Bemærkning til markeringen</button>
-<section class="noteform" id="dlg" hidden aria-labelledby="dlgt">
-  <form id="dlgform" novalidate>
-    <h2 id="dlgt">Ny bemærkning</h2>
-    <p class="ctx" id="dlgctx"></p>
-    <label class="fl" for="dlgtxt">Din bemærkning</label>
-    <textarea id="dlgtxt" rows="5" placeholder="Hvad undrer du dig over, eller hvad foreslår du?"></textarea>
-    <p class="err" id="dlgerr" hidden>Skriv en bemærkning, før du gemmer.</p>
-    <fieldset class="types"><legend>Hvad drejer det sig om?</legend>
-      <label><input type="radio" name="type" value="Uklart" checked> Uklart</label>
-      <label><input type="radio" name="type" value="Fejl"> Fejl</label>
-      <label><input type="radio" name="type" value="Forslag"> Forslag</label>
-    </fieldset>
-    <div id="dlgcitwrap"><label class="fl" for="dlgcit">Citat fra teksten</label>
-    <textarea id="dlgcit" rows="2"></textarea></div>
-    <div id="dlgname"></div>
-    <div class="acts"><button type="button" class="btn ghost" id="dlgcancel">Annullér</button><button type="submit" class="btn" id="dlgsave">Gem bemærkning</button></div>
-  </form>
-</section>
+
 <template id="herosvg"><svg xmlns="http://www.w3.org/2000/svg" viewBox="30 98 684 684" role="img" aria-labelledby="hero-t"><title id="hero-t">Arkitekturtrekanten: Processer, Information/Data og It-understøttelse omgivet af ringene Sikkerhed, Jura, Strategi og Styring, med økonomi som stiplet linje gennem alle lag</title><circle cx="372" cy="440" r="338" fill="#888886" stroke="none" stroke-width="0"/>
   <circle cx="372" cy="440" r="265" fill="#5B7FC4" stroke="none" stroke-width="0"/>
   <circle cx="372" cy="440" r="226" fill="#3A5FA0" stroke="none" stroke-width="0"/>
@@ -579,59 +562,81 @@ selBtn.addEventListener('click', openFromSel);
 main.addEventListener('click', e => { const b = e.target.closest('[data-note]'); if (b) openNote(b.dataset.note, null, currentSel() || (Date.now() - lastSelAt < 4000 ? lastSel : '')); });
 function currentSel(){ const s = document.getSelection(), body = $('#body'); const t = s ? s.toString().replace(/\s+/g,' ').trim() : ''; return (body && t && s.anchorNode && body.contains(s.anchorNode)) ? t.slice(0,600) : ''; }
 
-const dlg = $('#dlg'); let editing = null;
-function park(){ if (dlg.parentNode !== document.body) { dlg.hidden = true; document.body.appendChild(dlg); } }
-function nameRow(){
-  const nm = store.get(K_NAME) || '';
-  $('#dlgname').innerHTML = nm
-    ? `<p class="namerow">Skrives som <strong>${esc(nm)}</strong>. <button type="button" id="dlgnamechg">Ret navn</button></p>`
-    : `<label class="fl" for="dlgnm">Dit navn <span style="font-weight:400;color:var(--muted)">(valgfrit, huskes til næste gang)</span></label><input class="namein" id="dlgnm" type="text" autocomplete="name" placeholder="Fornavn og efternavn">`;
-  const b = $('#dlgnamechg'); if (b) b.addEventListener('click', () => { $('#dlgname').innerHTML = `<label class="fl" for="dlgnm">Dit navn</label><input class="namein" id="dlgnm" type="text" autocomplete="name" value="${esc(nm)}">`; $('#dlgnm').focus(); });
-}
+/* Formularen bygges forfra hver gang, så den aldrig kan hænge fast i en gammel tilstand */
+function closeForm(){ document.querySelectorAll('.noteform').forEach(x => x.remove()); }
+function park(){ closeForm(); }
 function openNote(secId, noteId, cit){
-  const notes = loadNotes();
-  const n = noteId ? notes.find(x => x.id === noteId) : null;
-  let ctx, host;
-  if (n) { ctx = `Kapitel ${n.kapitel}, ${n.afsnitsnummer ? n.afsnitsnummer + ' ' : ''}${n.afsnitstitel}`; host = main.querySelector(`li[data-id="${n.id}"]`); }
-  else { const r = secById[secId]; if (!r) return; ctx = `Kapitel ${r.c.num}, ${r.s.num ? r.s.num + ' ' : ''}${r.s.title}`; host = main.querySelector('.notebar'); }
-  if (!host) return;
-  editing = {secId, noteId};
-  $('#dlgt').textContent = n ? 'Ret bemærkning' : 'Ny bemærkning';
-  $('#dlgctx').textContent = ctx + ` (håndbog v${n ? n.haandbogsversion : M.version})`;
-  const c = n ? n.citat : (cit || '');
-  $('#dlgcit').value = c; $('#dlgcitwrap').hidden = !c;
-  $('#dlgtxt').value = n ? n.bemaerkning : '';
-  dlg.querySelectorAll('input[name=type]').forEach(r => r.checked = r.value === (n ? n.type : 'Uklart'));
-  $('#dlgerr').hidden = true;
-  nameRow();
-  selBtn.hidden = true;
-  host.after(dlg); dlg.hidden = false;
-  dlg.style.scrollMarginTop = ($('.top').getBoundingClientRect().height + 12) + 'px';
-  dlg.scrollIntoView({block: 'start', behavior: 'smooth'});
-  setTimeout(() => $('#dlgtxt').focus({preventScroll: true}), 250);
-}
-function closeDlg(){ park(); }
-$('#dlgcancel').addEventListener('click', closeDlg);
-$('#dlgform').addEventListener('submit', e => {
-  e.preventDefault();
-  const txt = $('#dlgtxt').value.trim();
-  if (!txt) { $('#dlgerr').hidden = false; $('#dlgtxt').focus(); return; }
-  const nmIn = $('#dlgnm'); if (nmIn && nmIn.value.trim()) store.set(K_NAME, nmIn.value.trim());
-  const type = dlg.querySelector('input[name=type]:checked').value, cit = $('#dlgcit').value.trim();
-  const notes = loadNotes(), now = new Date().toISOString();
-  if (editing.noteId) {
-    const n = notes.find(x => x.id === editing.noteId);
-    Object.assign(n, {type, citat: cit, bemaerkning: txt, rettet: now, navn: n.navn || store.get(K_NAME) || ''});
-  } else {
-    const {c, s} = secById[editing.secId];
-    notes.push({id: newId(), navn: store.get(K_NAME) || '', oprettet: now, rettet: '', haandbogsversion: M.version,
-      kapitel: c.num, kapiteltitel: c.title, kapitelversion: c.version, afsnit_ref: secRef(c, s), afsnit_id: s.id,
-      afsnitsnummer: s.num || '', afsnitstitel: s.title, type, citat: cit, bemaerkning: txt, sendt: ''});
+  try {
+    closeForm();
+    const notes = loadNotes();
+    const n = noteId ? notes.find(x => x.id === noteId) : null;
+    let ctx, host;
+    if (noteId) {
+      if (!n) { toast('Bemærkningen findes ikke længere.'); return; }
+      ctx = `Kapitel ${n.kapitel}, ${n.afsnitsnummer ? n.afsnitsnummer + ' ' : ''}${n.afsnitstitel}`;
+      host = main.querySelector(`li[data-id="${n.id}"]`);
+    } else {
+      const r = secById[secId] || secById[String(secId).normalize('NFC')];
+      if (!r) { toast('Afsnittet kunne ikke findes. Genindlæs siden, og prøv igen.', 5000); return; }
+      secId = r.s.id;
+      ctx = `Kapitel ${r.c.num}, ${r.s.num ? r.s.num + ' ' : ''}${r.s.title}`;
+      host = main.querySelector('.notebar');
+    }
+    if (!host) { toast('Feltet kunne ikke åbnes her. Gå til afsnittet, og prøv igen.', 5000); return; }
+    const c = n ? n.citat : (cit || '');
+    const nm = store.get(K_NAME) || '';
+    const type = n ? n.type : 'Uklart';
+    const f = document.createElement('section');
+    f.className = 'noteform';
+    f.innerHTML = `<form novalidate>
+      <h2>${n ? 'Ret bemærkning' : 'Ny bemærkning'}</h2>
+      <p class="ctx">${esc(ctx)} (håndbog v${esc(n ? n.haandbogsversion : M.version)})</p>
+      <label class="fl" for="nf-txt">Din bemærkning</label>
+      <textarea id="nf-txt" rows="5" placeholder="Hvad undrer du dig over, eller hvad foreslår du?">${esc(n ? n.bemaerkning : '')}</textarea>
+      <p class="err" hidden>Skriv en bemærkning, før du gemmer.</p>
+      <fieldset class="types"><legend>Hvad drejer det sig om?</legend>
+        ${['Uklart','Fejl','Forslag'].map(v => `<label><input type="radio" name="nf-type" value="${v}" ${v === type ? 'checked' : ''}> ${v}</label>`).join('')}
+      </fieldset>
+      <div class="nf-cit" ${c ? '' : 'hidden'}><label class="fl" for="nf-cit">Citat fra teksten</label><textarea id="nf-cit" rows="2">${esc(c)}</textarea></div>
+      <div class="nf-name">${nm
+        ? `<p class="namerow">Skrives som <strong>${esc(nm)}</strong>. <button type="button" class="nf-chg">Ret navn</button></p>`
+        : `<label class="fl" for="nf-nm">Dit navn <span style="font-weight:400;color:var(--muted)">(valgfrit, huskes til næste gang)</span></label><input class="namein" id="nf-nm" type="text" autocomplete="name" placeholder="Fornavn og efternavn">`}</div>
+      <div class="acts"><button type="button" class="btn ghost nf-cancel">Annullér</button><button type="submit" class="btn">Gem bemærkning</button></div>
+    </form>`;
+    host.after(f);
+    selBtn.hidden = true;
+    const q = s => f.querySelector(s);
+    q('.nf-cancel').addEventListener('click', closeForm);
+    const chg = q('.nf-chg');
+    if (chg) chg.addEventListener('click', () => { q('.nf-name').innerHTML = `<label class="fl" for="nf-nm">Dit navn</label><input class="namein" id="nf-nm" type="text" autocomplete="name" value="${esc(nm)}">`; q('#nf-nm').focus(); });
+    q('form').addEventListener('submit', e => {
+      e.preventDefault();
+      const txt = q('#nf-txt').value.trim();
+      if (!txt) { q('.err').hidden = false; q('#nf-txt').focus(); return; }
+      const nmIn = q('#nf-nm'); if (nmIn && nmIn.value.trim()) store.set(K_NAME, nmIn.value.trim());
+      const ty = (q('input[name=nf-type]:checked') || {}).value || 'Uklart';
+      const cit2 = q('#nf-cit').value.trim();
+      const all = loadNotes(), now = new Date().toISOString();
+      if (noteId) {
+        const x = all.find(y => y.id === noteId);
+        if (x) Object.assign(x, {type: ty, citat: cit2, bemaerkning: txt, rettet: now, navn: x.navn || store.get(K_NAME) || ''});
+      } else {
+        const {c: ch, s} = secById[secId];
+        all.push({id: newId(), navn: store.get(K_NAME) || '', oprettet: now, rettet: '', haandbogsversion: M.version,
+          kapitel: ch.num, kapiteltitel: ch.title, kapitelversion: ch.version, afsnit_ref: secRef(ch, s), afsnit_id: s.id,
+          afsnitsnummer: s.num || '', afsnitstitel: s.title, type: ty, citat: cit2, bemaerkning: txt, sendt: ''});
+      }
+      saveNotes(all); closeForm();
+      const sel = document.getSelection(); if (sel) sel.removeAllRanges();
+      if (location.hash.startsWith('#/bemaerkninger')) notesPage(); else toast('Bemærkningen er gemt på telefonen.');
+    });
+    f.style.scrollMarginTop = ($('.top').getBoundingClientRect().height + 12) + 'px';
+    f.scrollIntoView({block: 'start'});
+    setTimeout(() => { try { q('#nf-txt').focus({preventScroll: true}); } catch(e){ q('#nf-txt').focus(); } }, 150);
+  } catch(err) {
+    toast('Feltet kunne ikke åbnes: ' + (err && err.message ? err.message : err), 8000);
   }
-  saveNotes(notes); closeDlg();
-  const sel = document.getSelection(); if (sel) sel.removeAllRanges();
-  if (location.hash.startsWith('#/bemaerkninger')) notesPage(); else toast('Bemærkningen er gemt på telefonen.');
-});
+}
 function toast(msg, ms){
   let t = $('#toast'); if (!t){ t = document.createElement('div'); t.id = 'toast'; t.setAttribute('role','status'); t.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:6px;font-size:15px;z-index:40;max-width:90vw'; document.body.appendChild(t); }
   t.textContent = msg; t.hidden = false; clearTimeout(t._t); t._t = setTimeout(() => t.hidden = true, ms || 2600);
