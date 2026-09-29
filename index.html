@@ -154,6 +154,7 @@ textarea,.namein{width:100%;font:inherit;font-size:16px;padding:9px 11px;border:
 .err{color:var(--accent);font-size:14px;margin:-8px 0 12px}
 .acts{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
 .noted{text-decoration:underline dashed var(--accent);text-decoration-thickness:1.5px;text-underline-offset:3px;cursor:help}
+.noted.unsent{text-decoration:underline dotted var(--muted);text-decoration-thickness:2px}
 .nlist{list-style:none;padding:0;margin:14px 0 20px}
 .nlist li{border:1px solid var(--rule);border-radius:6px;padding:12px 14px;margin:0 0 10px}
 .nlist .nh{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;font-size:14px;color:var(--muted);margin:0 0 6px}
@@ -534,7 +535,7 @@ function welcome(){
       <li>Tryk eller klik på den røde knap <strong>✎ Skriv bemærkning</strong> nederst til højre. Den er der altid, når du læser et afsnit. Markér gerne et stykke tekst først, med fingeren eller musen, så kommer det med som citat.</li>
       <li>Skriv din bemærkning, og vælg, om det er <strong>uklart</strong>, en <strong>fejl</strong> eller et <strong>forslag</strong>. Kapitel, afsnit og version kommer automatisk med.</li>
       <li>Bemærkningerne samles under <strong>✎ Bemærkninger</strong> øverst på siden. Her kan du rette og slette dem.</li>
-      <li>Når du har sendt en bemærkning med citat, vises den citerede tekst med en <span class="noted" style="cursor:auto">stiplet linje</span>. Tryk eller klik på teksten for at se din bemærkning.</li>
+      <li>Tekst, du har gemt en bemærkning til, får en <span class="noted unsent" style="cursor:auto">grå prikket linje</span>. Når bemærkningen er sendt, bliver linjen <span class="noted" style="cursor:auto">rød og stiplet</span>. Tryk eller klik på teksten for at se din bemærkning.</li>
     </ol>
     ${!mobile ? '<p class="hint">På pc kan du trykke på <span class="kbd">/</span> for at gå direkte til søgefeltet.</p>' : ''}
 
@@ -731,26 +732,27 @@ updCount();
 /* ---------- Markér tekst, der er sendt bemærkninger til ---------- */
 function markNoted(secId){
   const body = $('#body'); if (!body) return;
-  const notes = loadNotes().filter(n => n.afsnit_id === secId && n.sendt && n.citat);
+  const notes = loadNotes().filter(n => n.afsnit_id === secId && n.citat);
   if (!notes.length) return;
   for (const n of notes){
     const idx = [];
     const w = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, { acceptNode: x => x.parentNode.closest('svg, .noteform') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT });
     let flat = '';
     while (w.nextNode()){ const node = w.currentNode, v = node.nodeValue; for (let i = 0; i < v.length; i++) if (!/\s/.test(v[i])) { flat += v[i]; idx.push([node, i]); } }
-    const needle = n.citat.replace(/\s+/g, '');
-    const at = needle ? flat.indexOf(needle) : -1;
+    const nf = s => s.normalize('NFC').replace(/[\s\u00AD\u200B\u2060]+/g, '').replace(/[\u2018\u2019\u201A]/g, "'").replace(/[\u201C\u201D\u201E]/g, '"');
+    let needle = nf(n.citat), at = needle ? flat.indexOf(needle) : -1;
+    if (at < 0 && needle.length > 40) { needle = needle.slice(0, 40); at = flat.indexOf(needle); }
     if (at < 0) continue;
     const segs = []; let cur = null;
     for (let k = at; k < at + needle.length; k++){
       const [node, off] = idx[k];
       if (!cur || cur.node !== node) { cur = {node, from: off, to: off + 1}; segs.push(cur); } else cur.to = off + 1;
     }
-    const tip = `Du har sendt en bemærkning til denne tekst ${dk(n.sendt)}`;
+    const tip = n.sendt ? `Du har sendt en bemærkning til denne tekst ${dk(n.sendt)}` : `Du har gemt en bemærkning til denne tekst (ikke sendt endnu)`;
     for (let k = segs.length - 1; k >= 0; k--){
       const s = segs[k]; const r = document.createRange();
       r.setStart(s.node, s.from); r.setEnd(s.node, s.to);
-      const span = document.createElement('span'); span.className = 'noted'; span.title = tip; span.dataset.nid = n.id;
+      const span = document.createElement('span'); span.className = 'noted' + (n.sendt ? ' sent' : ' unsent'); span.title = tip; span.dataset.nid = n.id;
       try { r.surroundContents(span); } catch(e){}
     }
   }
@@ -758,7 +760,7 @@ function markNoted(secId){
 main.addEventListener('click', e => {
   const s = e.target.closest('.noted'); if (!s || document.getSelection().toString()) return;
   const n = loadNotes().find(x => x.id === s.dataset.nid); if (!n) return;
-  toast(`Bemærkning (${n.type.toLowerCase()}) sendt ${dk(n.sendt)}: ${n.bemaerkning.length > 90 ? n.bemaerkning.slice(0, 90) + ' …' : n.bemaerkning}`, 5000);
+  toast(`Bemærkning (${n.type.toLowerCase()}) ${n.sendt ? 'sendt ' + dk(n.sendt) : 'gemt, ikke sendt'}: ${n.bemaerkning.length > 90 ? n.bemaerkning.slice(0, 90) + ' …' : n.bemaerkning}`, 5000);
 });
 
 route();
