@@ -133,8 +133,6 @@ table.doc{font-size:13px;margin-top:10px}
 .notes{display:flex;align-items:center;gap:6px;text-decoration:none;color:var(--ink);font-size:15px;padding:8px 10px;border:1px solid var(--rule);border-radius:6px;flex:0 0 auto;white-space:nowrap}
 .notes:hover{background:var(--surface)}
 .cnt{background:var(--accent);color:var(--accent-ink);border-radius:10px;font-size:12px;font-weight:700;padding:0 7px;line-height:18px}
-.notebar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin:6px 0 22px}
-.notebar .hint{font-size:14px}
 .btn{font:inherit;font-size:15px;font-weight:600;padding:9px 14px;border-radius:6px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);cursor:pointer;text-decoration:none;display:inline-block}
 .btn.ghost{background:transparent;color:var(--accent)}
 .btn.small{font-size:14px;padding:6px 10px}
@@ -291,7 +289,7 @@ CH.forEach(c => c.sections.forEach((s, i) => { secById[s.id] = {c, s, i}; s.subs
 CH.forEach(c => { secById[`k${c.num}-kapitel`] = {c, s: {id: `k${c.num}-kapitel`, num: '', title: 'Indledning til kapitlet', subs: []}, i: -1, link: `#/k${c.num}`}; });
 secById['forside'] = {c: {num: '', title: 'Forside', version: M.version}, s: {id: 'forside', num: '', title: 'Forside og Om håndbogen', subs: []}, i: -1, link: '#/'};
 const noteLink = n => (secById[n.afsnit_id] && secById[n.afsnit_id].link) || `#/s/${n.afsnit_id}`;
-const noteBar = (id, txt) => `<div class="notebar"><button type="button" class="btn ghost small" data-note="${id}">✎ ${txt}</button><span class="hint">Undrer du dig over noget? Markér gerne teksten først, så kommer den med som citat.</span></div>`;
+const noteBar = (id) => `<div class="notebar" data-note="${id}" hidden></div>`;
 const esc = t => String(t).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 
 function stamp(c){
@@ -321,7 +319,7 @@ function home(){
     <figure class="heroart">${document.getElementById('herosvg').innerHTML}<figcaption>Arkitekturtrekanten. Læs mere i <a href="#/s/${s22.id}">afsnit 2.2</a>.</figcaption></figure></div>
     <div class="tracks">` + SPOR.map(([sp, d]) => `<section class="track"><h2>${sp}</h2><p>${d}</p><ol>` +
       CH.filter(c => c.spor === sp).map(c => `<li><a href="#/k${c.num}"><span class="n">${c.num}</span><span>${esc(c.title)}</span><span class="v">v${c.version}</span></a></li>`).join('') + '</ol></section>').join('') +
-    `</div><div class="col"><h2>Om håndbogen</h2>${noteBar('forside', 'Skriv en bemærkning til forsiden')}<div id="body">${D.front}</div>${foot()}</div>`;
+    `</div><div class="col"><h2>Om håndbogen</h2>${noteBar('forside')}<div id="body">${D.front}</div>${foot()}</div>`;
   try { markNoted('forside'); } catch(err) { console.error(err); }
   lastSel = ''; selBtn.textContent = '✎ Skriv bemærkning'; showFab();
 }
@@ -332,7 +330,7 @@ function chapter(n){
   buildNav(c);
   main.innerHTML = `<div class="col">${stamp(c)}<p class="crumb"><a href="#/">Forside</a> / ${c.spor}</p>
     <h1><span class="num">${c.num}</span>${esc(c.title)}</h1><p class="sub">${esc(c.subtitle)}</p>
-    ${noteBar(`k${c.num}-kapitel`, 'Skriv en bemærkning til kapitlet')}<div id="body">${c.intro}</div>
+    ${noteBar(`k${c.num}-kapitel`)}<div id="body">${c.intro}</div>
     <h2>Afsnit</h2><ul class="seclist">${c.sections.map(s => `<li><a href="#/s/${s.id}"><span class="n">${s.num||''}</span><span>${esc(s.title)}</span></a></li>`).join('')}</ul>
     <details class="doc"><summary>Dokumentstyring for kapitel ${c.num} (nyeste version øverst)</summary><div class="tw doc">${c.doc}</div></details>${foot()}</div>`;
   try { markNoted(`k${c.num}-kapitel`); } catch(err) { console.error(err); }
@@ -349,9 +347,8 @@ function section(id, sub, terms){
   const lnk = (x, cls, lab) => x ? `<a class="${cls}" href="#/s/${x.s.id}"><span>${lab}</span>${x.s.num?esc(x.s.num)+' ':''}${esc(x.s.title)}</a>` : '';
   main.innerHTML = `<div class="col">${stamp(c)}<p class="crumb"><a href="#/">Forside</a> / <a href="#/k${c.num}">Kapitel ${c.num}: ${esc(c.title)}</a></p>
     <h1>${s.num?`<span class="num">${esc(s.num)}</span>`:''}${esc(s.title)}</h1>
-    ${noteBar(id, 'Skriv en bemærkning')}
+    ${noteBar(id)}
     <div id="body">${s.html}</div>
-    <div class="notebar" style="margin-top:28px"><button type="button" class="btn ghost small" data-note="${id}">✎ Skriv en bemærkning til afsnittet</button></div>
     <div class="pn">${lnk(prev,'pv','Forrige')}${lnk(next,'nx','Næste')}</div>${foot()}</div>`;
   if (terms && terms.length) highlight($('#body'), terms);
   try { markNoted(id); } catch(err) { console.error(err); }
@@ -532,7 +529,7 @@ function welcome(){
     <h2>Skriv bemærkninger, når du undrer dig</h2>
     <p>Møder du noget, der er uklart, forkert, eller som kunne gøres bedre, så skriv det ned, mens du står i det.</p>
     <ol>
-      <li>Tryk eller klik på den røde knap <strong>✎ Skriv bemærkning</strong> nederst til højre. Den er der altid, når du læser et afsnit. Markér gerne et stykke tekst først, med fingeren eller musen, så kommer det med som citat.</li>
+      <li>Tryk eller klik på den røde knap <strong>✎ Skriv bemærkning</strong> nederst til højre. Den er der altid, når du læser i håndbogen. Markér gerne et stykke tekst først, med fingeren eller musen, så kommer det med som citat.</li>
       <li>Skriv din bemærkning, og vælg, om det er <strong>uklart</strong>, en <strong>fejl</strong> eller et <strong>forslag</strong>. Kapitel, afsnit og version kommer automatisk med.</li>
       <li>Bemærkningerne samles under <strong>✎ Bemærkninger</strong> øverst på siden. Her kan du rette og slette dem.</li>
       <li>Tekst, du har gemt en bemærkning til, får en <span class="noted unsent" style="cursor:auto">grå prikket linje</span>. Når bemærkningen er sendt, bliver linjen <span class="noted" style="cursor:auto">rød og stiplet</span>. Tryk eller klik på teksten for at se din bemærkning.</li>
@@ -570,11 +567,10 @@ document.addEventListener('selectionchange', () => {
   else if (!txt) { clearTimeout(selHideT); selHideT = setTimeout(() => { const s2 = document.getSelection(); if (!s2 || !s2.toString().trim()) { lastSel = ''; selBtn.textContent = '✎ Skriv bemærkning'; } }, 4000); }
 });
 function showFab(){ selBtn.hidden = !(main.querySelector('#body') && main.querySelector('.notebar') && !document.querySelector('.noteform')); }
-function openFromSel(){ const b = main.querySelector('.notebar [data-note]'); if (b) openNote(b.dataset.note, null, lastSel); }
+function openFromSel(){ const b = main.querySelector('.notebar[data-note]'); if (b) openNote(b.dataset.note, null, lastSel); }
 selBtn.addEventListener('mousedown', e => e.preventDefault());
 selBtn.addEventListener('touchstart', e => { e.preventDefault(); openFromSel(); }, {passive: false});
 selBtn.addEventListener('click', openFromSel);
-main.addEventListener('click', e => { const b = e.target.closest('[data-note]'); if (b) openNote(b.dataset.note, null, currentSel() || (Date.now() - lastSelAt < 4000 ? lastSel : '')); });
 function currentSel(){ const s = document.getSelection(), body = $('#body'); const t = s ? s.toString().replace(/\s+/g,' ').trim() : ''; return (body && t && s.anchorNode && body.contains(s.anchorNode)) ? t.slice(0,600) : ''; }
 
 /* Formularen bygges forfra hver gang, så den aldrig kan hænge fast i en gammel tilstand */
@@ -643,7 +639,8 @@ function openNote(secId, noteId, cit){
       }
       saveNotes(all); closeForm();
       const sel = document.getSelection(); if (sel) sel.removeAllRanges();
-      if (location.hash.startsWith('#/bemaerkninger')) notesPage(); else toast('Bemærkningen er gemt på telefonen.');
+      if (location.hash.startsWith('#/bemaerkninger')) notesPage();
+      else { if (noteId) unmark(noteId); try { markNoted(secId); } catch(err) { console.error(err); } toast('Bemærkningen er gemt på telefonen.'); }
     });
     f.style.scrollMarginTop = ($('.top').getBoundingClientRect().height + 12) + 'px';
     f.scrollIntoView({block: 'start'});
@@ -730,11 +727,15 @@ async function sendNotes(rows){
 updCount();
 
 /* ---------- Markér tekst, der er sendt bemærkninger til ---------- */
+function unmark(noteId){
+  document.querySelectorAll(`.noted[data-nid="${noteId}"]`).forEach(s => { const p = s.parentNode; while (s.firstChild) p.insertBefore(s.firstChild, s); p.removeChild(s); p.normalize(); });
+}
 function markNoted(secId){
   const body = $('#body'); if (!body) return;
   const notes = loadNotes().filter(n => n.afsnit_id === secId && n.citat);
   if (!notes.length) return;
   for (const n of notes){
+    if (body.querySelector(`.noted[data-nid="${n.id}"]`)) continue;
     const idx = [];
     const w = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, { acceptNode: x => x.parentNode.closest('svg, .noteform') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT });
     let flat = '';
