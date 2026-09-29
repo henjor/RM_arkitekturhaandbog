@@ -173,6 +173,7 @@ textarea,.namein{width:100%;font:inherit;font-size:16px;padding:9px 11px;border:
 .plat section{border:1px solid var(--rule);border-radius:6px;padding:12px 16px}
 .plat h3{margin:0 0 8px !important;font-size:17px}
 .plat .first{border-color:var(--accent)}
+.welcome h3.grp{font-size:18px;margin:22px 0 4px;color:var(--muted)}
 .ok{border-left:4px solid #3A7A4A;background:var(--surface);padding:8px 12px;font-size:15px}
 .who{font-weight:600}
 @media (max-width:900px){.plat{grid-template-columns:1fr}.notes .nl{display:none}.notes{padding:8px 10px;order:2;margin-left:auto}}
@@ -488,6 +489,8 @@ const newId = () => { const d = new Date(), p = n => String(n).padStart(2,'0'); 
 function welcome(){
   buildNav(null);
   const name = esc(store.get(K_NAME) || '');
+  const mobile = isIOS || isAndroid;
+  const isEdge = /Edg\//.test(navigator.userAgent);
   const iosBox = `<section class="${isIOS?'first':''}"><h3>iPhone (Safari)</h3><ol>
       <li>Åbn siden i <strong>Safari</strong>.</li>
       <li>Tryk på <strong>Del-knappen</strong> (firkanten med en pil op).</li>
@@ -498,26 +501,47 @@ function welcome(){
       <li>Tryk på <strong>⋮</strong> øverst til højre.</li>
       <li>Vælg <strong>Føj til startskærm</strong> eller <strong>Installer app</strong>.</li>
       <li>Bekræft med <strong>Tilføj</strong>.</li></ol></section>`;
-  main.innerHTML = `<div class="col welcome">${stamp(null)}
-    <h1>Velkommen til Arkitekturhåndbogen</h1>
-    <p class="sub">Håndbogen er den fælles metode for arkitekterne i Digitalisering og It. Her kan du søge i den, slå op i den og skrive bemærkninger, når du undrer dig over noget.</p>
-
-    <h2>Læg håndbogen på hjemmeskærmen</h2>
-    ${standalone ? '<p class="ok">Du bruger allerede håndbogen som genvej på hjemmeskærmen. Dine bemærkninger gemmes sikkert her.</p>' : `
-    <p>Så har du den ved hånden som en app, og dine bemærkninger bliver gemt sikkert på telefonen.</p>
+  const edgeBox = `<section class="${!mobile && isEdge?'first':''}"><h3>Microsoft Edge</h3><ol>
+      <li>Åbn siden i <strong>Edge</strong>.</li>
+      <li>Klik på <strong>⋯</strong> øverst til højre.</li>
+      <li>Vælg <strong>Apps</strong> og derefter <strong>Installer dette websted som en app</strong>.</li>
+      <li>Klik på <strong>Installer</strong>. Du kan derefter fastgøre håndbogen til proceslinjen eller menuen Start.</li></ol></section>`;
+  const chromeBox = `<section class="${!mobile && !isEdge?'first':''}"><h3>Google Chrome</h3><ol>
+      <li>Åbn siden i <strong>Chrome</strong>.</li>
+      <li>Klik på <strong>⋮</strong> øverst til højre.</li>
+      <li>Vælg <strong>Cast, gem og del</strong> og derefter <strong>Installer side som app</strong> eller <strong>Opret genvej</strong>.</li>
+      <li>Klik på <strong>Installer</strong> eller <strong>Opret</strong>.</li></ol></section>`;
+  const phone = `<h3 class="grp">På telefonen</h3>
     <div class="plat">${isAndroid ? andBox + iosBox : iosBox + andBox}</div>
-    <p class="warn"><strong>Brug genvejen, når du skriver bemærkninger.</strong> På iPhone har genvejen og Safari hver sit lager, så bemærkninger skrevet i Safari kan ikke ses i genvejen. Safari sletter desuden data fra hjemmesider, der ikke har været brugt i syv dage. Det gælder ikke genvejen.</p>`}
+    <p class="warn"><strong>Brug genvejen, når du skriver bemærkninger på telefonen.</strong> På iPhone har genvejen og Safari hver sit lager, så bemærkninger skrevet i Safari kan ikke ses i genvejen. Safari sletter desuden data fra hjemmesider, der ikke har været brugt i syv dage. Det gælder ikke genvejen.</p>`;
+  const pc = `<h3 class="grp">På pc</h3>
+    <div class="plat">${isEdge ? edgeBox + chromeBox : chromeBox + edgeBox}</div>
+    <p class="hint">Menunavnene kan variere lidt mellem versioner. Et bogmærke (Ctrl+D) virker også.</p>
+    <p class="warn"><strong>Bemærkninger gemmes i den browser, du skriver dem i.</strong> Den installerede app og browseren deler lager, men en anden browser eller en anden pc kan ikke se dem. Sletter du browserdata, forsvinder bemærkninger, der ikke er sendt.</p>`;
+ main.innerHTML = `<div class="col welcome">${stamp(null)}
+    <h1>Velkommen til Arkitekturhåndbogen</h1>
+    <p class="sub">Håndbogen er den fælles metode for arkitekterne i Digitalisering og It. Her kan du søge i den, slå op i den og skrive bemærkninger, når du undrer dig over noget. Den virker både på telefon og pc.</p>
+
+    <h2>Gør håndbogen let at finde</h2>
+    ${standalone ? '<p class="ok">Du bruger allerede håndbogen som app. Dine bemærkninger gemmes her.</p>' : `
+    <p>Læg håndbogen som app på telefonen eller pc'en, så har du den ved hånden, og dine bemærkninger bliver gemt sikkert.</p>
+    ${mobile ? phone + pc : pc + phone}`}
 
     <h2>Skriv bemærkninger, når du undrer dig</h2>
     <p>Møder du noget, der er uklart, forkert, eller som kunne gøres bedre, så skriv det ned, mens du står i det.</p>
     <ol>
-      <li>Tryk på <strong>✎ Skriv en bemærkning</strong> øverst eller nederst i afsnittet. Markér gerne et stykke tekst først, så kommer det med som citat.</li>
-      <li>Vælg, om det er <strong>uklart</strong>, en <strong>fejl</strong> eller et <strong>forslag</strong>, og skriv din bemærkning. Kapitel, afsnit og version kommer automatisk med.</li>
-      <li>Bemærkningerne samles på telefonen under <strong>✎ Bemærkninger</strong> øverst på siden. Her kan du rette og slette dem.</li>
+      <li>Tryk eller klik på <strong>✎ Skriv en bemærkning</strong> øverst eller nederst i afsnittet. Markér gerne et stykke tekst først, med fingeren eller musen, så kommer det med som citat.</li>
+      <li>Skriv din bemærkning, og vælg, om det er <strong>uklart</strong>, en <strong>fejl</strong> eller et <strong>forslag</strong>. Kapitel, afsnit og version kommer automatisk med.</li>
+      <li>Bemærkningerne samles under <strong>✎ Bemærkninger</strong> øverst på siden. Her kan du rette og slette dem.</li>
     </ol>
+    ${!mobile ? '<p class="hint">På pc kan du trykke på <span class="kbd">/</span> for at gå direkte til søgefeltet.</p>' : ''}
 
     <h2>Send dine bemærkninger</h2>
-    <p>Når du er klar, trykker du på <strong>Send bemærkninger</strong> under ✎ Bemærkninger. Vælg Outlook eller Mail, så ligger dine bemærkninger som vedhæftet fil i en ny mail.</p>
+    <p>Når du er klar, trykker eller klikker du på <strong>Send bemærkninger</strong> under ✎ Bemærkninger.</p>
+    <ul>
+      <li><strong>På telefonen</strong> åbner delemenuen. Vælg Outlook eller Mail, så ligger bemærkningerne som vedhæftet fil i en ny mail.</li>
+      <li><strong>På pc</strong> åbner en delemenu, hvis pc'en har en. Vælg Outlook. Ellers gemmes filen i mappen Overførsler, og du vedhæfter den i en ny mail. Linket <strong>Åbn en ny mail</strong> starter mailen for dig.</li>
+    </ul>
     <p class="sendbox">Modtagerfeltet er tomt. <span class="who">Send mailen til Henrik Hammer Jordt</span>, Området for Arkitektur. Bemærkningerne indgår i den løbende revision af håndbogen.</p>
 
     <p style="margin-top:28px"><label class="fl" for="wname">Dit navn <span style="font-weight:400;color:var(--muted)">(valgfrit, du kan også skrive det sammen med din første bemærkning)</span></label>
@@ -637,7 +661,7 @@ function notesPage(){
     <label class="fl" for="nname">Dit navn</label><input class="namein" id="nname" type="text" autocomplete="name" value="${nm}" placeholder="Fornavn og efternavn">
     <div class="sendbox">
       <p><strong>${unsent.length ? `${unsent.length} ${unsent.length===1?'bemærkning':'bemærkninger'} er ikke sendt.` : 'Du har ingen bemærkninger, der ikke er sendt.'}</strong></p>
-      <p>Tryk på knappen, og vælg Outlook eller Mail. Filen med bemærkningerne er vedhæftet. Modtagerfeltet er tomt: <span class="who">send mailen til Henrik Hammer Jordt</span>.</p>
+      <p>${(isIOS || isAndroid) ? 'Tryk på knappen, og vælg Outlook eller Mail. Filen med bemærkningerne er vedhæftet.' : 'Klik på knappen. Viser pc\'en en delemenu, vælger du Outlook. Ellers gemmes filen i Overførsler, og du vedhæfter den i en ny mail.'} Modtagerfeltet er tomt: <span class="who">send mailen til Henrik Hammer Jordt</span>.</p>
       <p><button type="button" class="btn" id="send" ${unsent.length?'':'disabled'}>Send bemærkninger</button>
       ${sent.length ? ' <button type="button" class="btn ghost small" id="sendall">Send alle igen</button>' : ''}</p>
       <div id="sendstate"></div>
