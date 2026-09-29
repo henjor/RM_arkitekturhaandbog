@@ -153,6 +153,7 @@ table.doc{font-size:13px;margin-top:10px}
 textarea,.namein{width:100%;font:inherit;font-size:16px;padding:9px 11px;border:1px solid var(--rule);border-radius:6px;background:var(--surface);color:var(--ink);margin:0 0 14px;resize:vertical}
 .err{color:var(--accent);font-size:14px;margin:-8px 0 12px}
 .acts{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+.noted{text-decoration:underline dashed var(--accent);text-decoration-thickness:1.5px;text-underline-offset:3px;cursor:help}
 .nlist{list-style:none;padding:0;margin:14px 0 20px}
 .nlist li{border:1px solid var(--rule);border-radius:6px;padding:12px 14px;margin:0 0 10px}
 .nlist .nh{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;font-size:14px;color:var(--muted);margin:0 0 6px}
@@ -357,6 +358,7 @@ function section(id, sub, terms){
     <div class="notebar" style="margin-top:28px"><button type="button" class="btn ghost small" data-note="${id}">✎ Skriv en bemærkning til afsnittet</button></div>
     <div class="pn">${lnk(prev,'pv','Forrige')}${lnk(next,'nx','Næste')}</div>${foot()}</div>`;
   if (terms && terms.length) highlight($('#body'), terms);
+  markNoted(id);
   const target = sub ? document.getElementById(sub) : (terms && terms.length ? main.querySelector('mark') : null);
   if (target) target.scrollIntoView({block:'start'}); else window.scrollTo(0,0);
 }
@@ -371,7 +373,10 @@ const IDX = D.index.map(u => ({...u, nt: norm(u.title), np: norm(u.parent||''), 
 function tokens(q){ return norm(q).split(/[\s,;:]+/).map(t => t.replace(/^[^\wæøå.]+|[^\wæøå]+$/gi,'')).filter(t => t.length > 1 || /^\d$/.test(t)); }
 const rxc = {};
 const reEsc = t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-function termRe(t, flags){ const tail = t.length <= 3 ? '(?![\\p{L}\\p{N}])' : ''; return new RegExp('(?<![\\p{L}\\p{N}])(' + reEsc(t) + ')' + tail, flags); }
+const LB = (() => { try { new RegExp('(?<!a)b'); return true; } catch(e){ return false; } })();
+const PRE = LB ? '(?<![\\p{L}\\p{N}])' : '(^|[^\\p{L}\\p{N}])';
+const MARK = LB ? '<mark>$1</mark>' : '$1<mark>$2</mark>';
+function termRe(t, flags){ const tail = t.length <= 3 ? '(?![\\p{L}\\p{N}])' : ''; return new RegExp(PRE + '(' + reEsc(t) + ')' + tail, flags); }
 function count(h, t){ const re = rxc[t] || (rxc[t] = termRe(t, 'giu')); re.lastIndex = 0; const m = h.match(re); return m ? m.length : 0; }
 function search(q){
   const ts = tokens(q); if (!ts.length) return [];
@@ -390,11 +395,11 @@ function search(q){
 }
 function snippet(text, ts){
   const low = norm(text); let p = -1;
-  for (const t of ts){ const mm = termRe(t,'iu').exec(low); const k = mm ? mm.index : -1; if (k !== -1 && (p === -1 || k < p)) p = k; }
+  for (const t of ts){ const mm = termRe(t,'iu').exec(low); const k = mm ? mm.index + (LB ? 0 : mm[1].length) : -1; if (k !== -1 && (p === -1 || k < p)) p = k; }
   if (p === -1) return esc(text.slice(0, 180)) + (text.length > 180 ? ' …' : '');
   const a = Math.max(0, p - 70), b = Math.min(text.length, p + 150);
   let s = esc(text.slice(a, b));
-  for (const t of ts){ s = s.replace(termRe(t,'giu'), '<mark>$1</mark>'); }
+  for (const t of ts){ s = s.replace(termRe(t,'giu'), MARK); }
   return (a ? '… ' : '') + s + (b < text.length ? ' …' : '');
 }
 function results(q){
@@ -413,14 +418,14 @@ function results(q){
   window.scrollTo(0,0);
 }
 function highlight(root, ts){
-  const re = new RegExp('(?<![\\p{L}\\p{N}])(' + ts.map(reEsc).join('|') + ')', 'giu');
+  const re = new RegExp(PRE + '(' + ts.map(reEsc).join('|') + ')', 'giu');
   const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   const nodes = []; while (w.nextNode()) nodes.push(w.currentNode);
   nodes.forEach(n => {
     if (n.parentNode.closest('svg')) return;
     if (!re.test(n.nodeValue)) return; re.lastIndex = 0;
     const span = document.createElement('span');
-    span.innerHTML = esc(n.nodeValue).replace(re, '<mark>$1</mark>');
+    span.innerHTML = esc(n.nodeValue).replace(re, MARK);
     n.parentNode.replaceChild(span, n);
   });
 }
@@ -533,6 +538,7 @@ function welcome(){
       <li>Tryk eller klik på <strong>✎ Skriv en bemærkning</strong> øverst eller nederst i afsnittet. Markér gerne et stykke tekst først, med fingeren eller musen, så kommer det med som citat.</li>
       <li>Skriv din bemærkning, og vælg, om det er <strong>uklart</strong>, en <strong>fejl</strong> eller et <strong>forslag</strong>. Kapitel, afsnit og version kommer automatisk med.</li>
       <li>Bemærkningerne samles under <strong>✎ Bemærkninger</strong> øverst på siden. Her kan du rette og slette dem.</li>
+      <li>Når du har sendt en bemærkning med citat, vises den citerede tekst med en <span class="noted" style="cursor:auto">stiplet linje</span>. Tryk eller klik på teksten for at se din bemærkning.</li>
     </ol>
     ${!mobile ? '<p class="hint">På pc kan du trykke på <span class="kbd">/</span> for at gå direkte til søgefeltet.</p>' : ''}
 
@@ -559,16 +565,18 @@ function welcome(){
 }
 
 /* ---------- Markering og dialog ---------- */
-const selBtn = $('#selnote'); let lastSel = '';
+const selBtn = $('#selnote'); let lastSel = '', lastSelAt = 0, selHideT;
 document.addEventListener('selectionchange', () => {
   const s = document.getSelection(), body = $('#body');
   const txt = s ? s.toString().replace(/\s+/g, ' ').trim() : '';
-  if (body && txt && s.anchorNode && body.contains(s.anchorNode)) { lastSel = txt.slice(0, 600); selBtn.hidden = false; }
-  else if (!txt) { selBtn.hidden = true; }
+  if (body && txt && s.anchorNode && body.contains(s.anchorNode)) { lastSel = txt.slice(0, 600); lastSelAt = Date.now(); clearTimeout(selHideT); selBtn.hidden = false; }
+  else if (!txt) { clearTimeout(selHideT); selHideT = setTimeout(() => { const s2 = document.getSelection(); if (!s2 || !s2.toString().trim()) selBtn.hidden = true; }, 4000); }
 });
-selBtn.addEventListener('pointerdown', e => e.preventDefault());
-selBtn.addEventListener('click', () => { const m = location.hash.match(/#\/s\/([^/?]+)/); if (m) openNote(decodeURIComponent(m[1]), null, lastSel); });
-main.addEventListener('click', e => { const b = e.target.closest('[data-note]'); if (b) openNote(b.dataset.note, null, currentSel()); });
+function openFromSel(){ const m = location.hash.match(/#\/s\/([^/?]+)/); if (m) openNote(decodeURIComponent(m[1]), null, lastSel); }
+selBtn.addEventListener('mousedown', e => e.preventDefault());
+selBtn.addEventListener('touchstart', e => { e.preventDefault(); openFromSel(); }, {passive: false});
+selBtn.addEventListener('click', openFromSel);
+main.addEventListener('click', e => { const b = e.target.closest('[data-note]'); if (b) openNote(b.dataset.note, null, currentSel() || (Date.now() - lastSelAt < 4000 ? lastSel : '')); });
 function currentSel(){ const s = document.getSelection(), body = $('#body'); const t = s ? s.toString().replace(/\s+/g,' ').trim() : ''; return (body && t && s.anchorNode && body.contains(s.anchorNode)) ? t.slice(0,600) : ''; }
 
 const dlg = $('#dlg'); let editing = null;
@@ -624,9 +632,9 @@ $('#dlgform').addEventListener('submit', e => {
   const sel = document.getSelection(); if (sel) sel.removeAllRanges();
   if (location.hash.startsWith('#/bemaerkninger')) notesPage(); else toast('Bemærkningen er gemt på telefonen.');
 });
-function toast(msg){
+function toast(msg, ms){
   let t = $('#toast'); if (!t){ t = document.createElement('div'); t.id = 'toast'; t.setAttribute('role','status'); t.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:6px;font-size:15px;z-index:40;max-width:90vw'; document.body.appendChild(t); }
-  t.textContent = msg; t.hidden = false; clearTimeout(t._t); t._t = setTimeout(() => t.hidden = true, 2600);
+  t.textContent = msg; t.hidden = false; clearTimeout(t._t); t._t = setTimeout(() => t.hidden = true, ms || 2600);
 }
 
 /* ---------- Mine bemærkninger ---------- */
@@ -700,6 +708,39 @@ async function sendNotes(rows){
   $('#marksent').addEventListener('click', () => { markSent(ids); notesPage(); toast('Bemærkningerne er markeret som sendt.'); });
 }
 updCount();
+
+/* ---------- Markér tekst, der er sendt bemærkninger til ---------- */
+function markNoted(secId){
+  const body = $('#body'); if (!body) return;
+  const notes = loadNotes().filter(n => n.afsnit_id === secId && n.sendt && n.citat);
+  if (!notes.length) return;
+  for (const n of notes){
+    const idx = [];
+    const w = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, { acceptNode: x => x.parentNode.closest('svg, .noteform') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT });
+    let flat = '';
+    while (w.nextNode()){ const node = w.currentNode, v = node.nodeValue; for (let i = 0; i < v.length; i++) if (!/\s/.test(v[i])) { flat += v[i]; idx.push([node, i]); } }
+    const needle = n.citat.replace(/\s+/g, '');
+    const at = needle ? flat.indexOf(needle) : -1;
+    if (at < 0) continue;
+    const segs = []; let cur = null;
+    for (let k = at; k < at + needle.length; k++){
+      const [node, off] = idx[k];
+      if (!cur || cur.node !== node) { cur = {node, from: off, to: off + 1}; segs.push(cur); } else cur.to = off + 1;
+    }
+    const tip = `Du har sendt en bemærkning til denne tekst ${dk(n.sendt)}`;
+    for (let k = segs.length - 1; k >= 0; k--){
+      const s = segs[k]; const r = document.createRange();
+      r.setStart(s.node, s.from); r.setEnd(s.node, s.to);
+      const span = document.createElement('span'); span.className = 'noted'; span.title = tip; span.dataset.nid = n.id;
+      try { r.surroundContents(span); } catch(e){}
+    }
+  }
+}
+main.addEventListener('click', e => {
+  const s = e.target.closest('.noted'); if (!s || document.getSelection().toString()) return;
+  const n = loadNotes().find(x => x.id === s.dataset.nid); if (!n) return;
+  toast(`Bemærkning (${n.type.toLowerCase()}) sendt ${dk(n.sendt)}: ${n.bemaerkning.length > 90 ? n.bemaerkning.slice(0, 90) + ' …' : n.bemaerkning}`, 5000);
+});
 
 route();
 })();
