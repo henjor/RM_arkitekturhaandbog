@@ -306,6 +306,7 @@ function buildNav(cur, curSec){
 }
 
 function home(){
+  window.scrollTo(0,0);
   buildNav(null);
   const s22 = CH[1].sections.find(s => s.num === '2.2');
   main.innerHTML = `<div class="col">${stamp(null)}</div><div class="herogrid"><div class="hero">
@@ -318,6 +319,7 @@ function home(){
 }
 
 function chapter(n){
+  window.scrollTo(0,0);
   const c = CH.find(x => x.num === n); if (!c) return home();
   buildNav(c);
   main.innerHTML = `<div class="col">${stamp(c)}<p class="crumb"><a href="#/">Forside</a> / ${c.spor}</p>
