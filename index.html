@@ -219,7 +219,7 @@ footer{color:var(--muted);font-size:13px;margin-top:60px;max-width:72ch}
   body.navopen{overflow:hidden}
   .navclose{display:flex}
   .brand span{display:none}
-  main{padding:20px 18px 60px}
+  main{padding:20px 18px 110px}
   h1{font-size:28px}.hero h1{font-size:32px}
   .tracks{grid-template-columns:1fr}
   .herogrid{grid-template-columns:1fr;gap:18px}
@@ -253,7 +253,7 @@ footer{color:var(--muted);font-size:13px;margin-top:60px;max-width:72ch}
   <nav class="side" id="side" aria-label="Kapitler"></nav>
   <main id="main" tabindex="-1"></main>
 </div>
-<button class="selnote" id="selnote" type="button" hidden>✎ Bemærkning til markeringen</button>
+<button class="selnote" id="selnote" type="button" hidden>✎ Skriv bemærkning</button>
 
 <template id="herosvg"><svg xmlns="http://www.w3.org/2000/svg" viewBox="30 98 684 684" role="img" aria-labelledby="hero-t"><title id="hero-t">Arkitekturtrekanten: Processer, Information/Data og It-understøttelse omgivet af ringene Sikkerhed, Jura, Strategi og Styring, med økonomi som stiplet linje gennem alle lag</title><circle cx="372" cy="440" r="338" fill="#888886" stroke="none" stroke-width="0"/>
   <circle cx="372" cy="440" r="265" fill="#5B7FC4" stroke="none" stroke-width="0"/>
@@ -346,6 +346,7 @@ function section(id, sub, terms){
   markNoted(id);
   const target = sub ? document.getElementById(sub) : (terms && terms.length ? main.querySelector('mark') : null);
   if (target) target.scrollIntoView({block:'start'}); else window.scrollTo(0,0);
+  lastSel = ''; selBtn.textContent = '✎ Skriv bemærkning'; showFab();
 }
 
 function foot(){
@@ -520,7 +521,7 @@ function welcome(){
     <h2>Skriv bemærkninger, når du undrer dig</h2>
     <p>Møder du noget, der er uklart, forkert, eller som kunne gøres bedre, så skriv det ned, mens du står i det.</p>
     <ol>
-      <li>Tryk eller klik på <strong>✎ Skriv en bemærkning</strong> øverst eller nederst i afsnittet. Markér gerne et stykke tekst først, med fingeren eller musen, så kommer det med som citat.</li>
+      <li>Tryk eller klik på den røde knap <strong>✎ Skriv bemærkning</strong> nederst til højre. Den er der altid, når du læser et afsnit. Markér gerne et stykke tekst først, med fingeren eller musen, så kommer det med som citat.</li>
       <li>Skriv din bemærkning, og vælg, om det er <strong>uklart</strong>, en <strong>fejl</strong> eller et <strong>forslag</strong>. Kapitel, afsnit og version kommer automatisk med.</li>
       <li>Bemærkningerne samles under <strong>✎ Bemærkninger</strong> øverst på siden. Her kan du rette og slette dem.</li>
       <li>Når du har sendt en bemærkning med citat, vises den citerede tekst med en <span class="noted" style="cursor:auto">stiplet linje</span>. Tryk eller klik på teksten for at se din bemærkning.</li>
@@ -554,9 +555,10 @@ const selBtn = $('#selnote'); let lastSel = '', lastSelAt = 0, selHideT;
 document.addEventListener('selectionchange', () => {
   const s = document.getSelection(), body = $('#body');
   const txt = s ? s.toString().replace(/\s+/g, ' ').trim() : '';
-  if (body && txt && s.anchorNode && body.contains(s.anchorNode)) { lastSel = txt.slice(0, 600); lastSelAt = Date.now(); clearTimeout(selHideT); selBtn.hidden = false; }
-  else if (!txt) { clearTimeout(selHideT); selHideT = setTimeout(() => { const s2 = document.getSelection(); if (!s2 || !s2.toString().trim()) selBtn.hidden = true; }, 4000); }
+  if (body && txt && s.anchorNode && body.contains(s.anchorNode)) { lastSel = txt.slice(0, 600); lastSelAt = Date.now(); clearTimeout(selHideT); selBtn.textContent = '✎ Bemærkning til markeringen'; showFab(); }
+  else if (!txt) { clearTimeout(selHideT); selHideT = setTimeout(() => { const s2 = document.getSelection(); if (!s2 || !s2.toString().trim()) { lastSel = ''; selBtn.textContent = '✎ Skriv bemærkning'; } }, 4000); }
 });
+function showFab(){ selBtn.hidden = !(location.hash.startsWith('#/s/') && $('#body') && !document.querySelector('.noteform')); }
 function openFromSel(){ const m = location.hash.match(/#\/s\/([^/?]+)/); if (m) openNote(decodeURIComponent(m[1]), null, lastSel); }
 selBtn.addEventListener('mousedown', e => e.preventDefault());
 selBtn.addEventListener('touchstart', e => { e.preventDefault(); openFromSel(); }, {passive: false});
@@ -565,7 +567,7 @@ main.addEventListener('click', e => { const b = e.target.closest('[data-note]');
 function currentSel(){ const s = document.getSelection(), body = $('#body'); const t = s ? s.toString().replace(/\s+/g,' ').trim() : ''; return (body && t && s.anchorNode && body.contains(s.anchorNode)) ? t.slice(0,600) : ''; }
 
 /* Formularen bygges forfra hver gang, så den aldrig kan hænge fast i en gammel tilstand */
-function closeForm(){ document.querySelectorAll('.noteform').forEach(x => x.remove()); }
+function closeForm(){ document.querySelectorAll('.noteform').forEach(x => x.remove()); if (typeof showFab === 'function') showFab(); }
 function park(){ closeForm(); }
 function openNote(secId, noteId, cit){
   try {
