@@ -287,6 +287,10 @@ const SPOR = [
 ];
 const secById = {}, subToSec = {};
 CH.forEach(c => c.sections.forEach((s, i) => { secById[s.id] = {c, s, i}; s.subs.forEach(x => subToSec[x.id] = s.id); }));
+CH.forEach(c => { secById[`k${c.num}-kapitel`] = {c, s: {id: `k${c.num}-kapitel`, num: '', title: 'Indledning til kapitlet', subs: []}, i: -1, link: `#/k${c.num}`}; });
+secById['forside'] = {c: {num: '', title: 'Forside', version: M.version}, s: {id: 'forside', num: '', title: 'Forside og Om håndbogen', subs: []}, i: -1, link: '#/'};
+const noteLink = n => (secById[n.afsnit_id] && secById[n.afsnit_id].link) || `#/s/${n.afsnit_id}`;
+const noteBar = (id, txt) => `<div class="notebar"><button type="button" class="btn ghost small" data-note="${id}">✎ ${txt}</button><span class="hint">Undrer du dig over noget? Markér gerne teksten først, så kommer den med som citat.</span></div>`;
 const esc = t => String(t).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 
 function stamp(c){
@@ -316,7 +320,9 @@ function home(){
     <figure class="heroart">${document.getElementById('herosvg').innerHTML}<figcaption>Arkitekturtrekanten. Læs mere i <a href="#/s/${s22.id}">afsnit 2.2</a>.</figcaption></figure></div>
     <div class="tracks">` + SPOR.map(([sp, d]) => `<section class="track"><h2>${sp}</h2><p>${d}</p><ol>` +
       CH.filter(c => c.spor === sp).map(c => `<li><a href="#/k${c.num}"><span class="n">${c.num}</span><span>${esc(c.title)}</span><span class="v">v${c.version}</span></a></li>`).join('') + '</ol></section>').join('') +
-    `</div><div class="col"><h2>Om håndbogen</h2>${D.front}${foot()}</div>`;
+    `</div><div class="col"><h2>Om håndbogen</h2>${noteBar('forside', 'Skriv en bemærkning til forsiden')}<div id="body">${D.front}</div>${foot()}</div>`;
+  try { markNoted('forside'); } catch(err) { console.error(err); }
+  lastSel = ''; selBtn.textContent = '✎ Skriv bemærkning'; showFab();
 }
 
 function chapter(n){
@@ -324,9 +330,12 @@ function chapter(n){
   const c = CH.find(x => x.num === n); if (!c) return home();
   buildNav(c);
   main.innerHTML = `<div class="col">${stamp(c)}<p class="crumb"><a href="#/">Forside</a> / ${c.spor}</p>
-    <h1><span class="num">${c.num}</span>${esc(c.title)}</h1><p class="sub">${esc(c.subtitle)}</p>${c.intro}
+    <h1><span class="num">${c.num}</span>${esc(c.title)}</h1><p class="sub">${esc(c.subtitle)}</p>
+    ${noteBar(`k${c.num}-kapitel`, 'Skriv en bemærkning til kapitlet')}<div id="body">${c.intro}</div>
     <h2>Afsnit</h2><ul class="seclist">${c.sections.map(s => `<li><a href="#/s/${s.id}"><span class="n">${s.num||''}</span><span>${esc(s.title)}</span></a></li>`).join('')}</ul>
     <details class="doc"><summary>Dokumentstyring for kapitel ${c.num} (nyeste version øverst)</summary><div class="tw doc">${c.doc}</div></details>${foot()}</div>`;
+  try { markNoted(`k${c.num}-kapitel`); } catch(err) { console.error(err); }
+  lastSel = ''; selBtn.textContent = '✎ Skriv bemærkning'; showFab();
 }
 
 function section(id, sub, terms){
@@ -339,7 +348,7 @@ function section(id, sub, terms){
   const lnk = (x, cls, lab) => x ? `<a class="${cls}" href="#/s/${x.s.id}"><span>${lab}</span>${x.s.num?esc(x.s.num)+' ':''}${esc(x.s.title)}</a>` : '';
   main.innerHTML = `<div class="col">${stamp(c)}<p class="crumb"><a href="#/">Forside</a> / <a href="#/k${c.num}">Kapitel ${c.num}: ${esc(c.title)}</a></p>
     <h1>${s.num?`<span class="num">${esc(s.num)}</span>`:''}${esc(s.title)}</h1>
-    <div class="notebar"><button type="button" class="btn ghost small" data-note="${id}">✎ Skriv en bemærkning</button><span class="hint">Undrer du dig over noget? Markér gerne teksten først, så kommer den med som citat.</span></div>
+    ${noteBar(id, 'Skriv en bemærkning')}
     <div id="body">${s.html}</div>
     <div class="notebar" style="margin-top:28px"><button type="button" class="btn ghost small" data-note="${id}">✎ Skriv en bemærkning til afsnittet</button></div>
     <div class="pn">${lnk(prev,'pv','Forrige')}${lnk(next,'nx','Næste')}</div>${foot()}</div>`;
@@ -474,7 +483,7 @@ const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platfor
 const isAndroid = /Android/i.test(navigator.userAgent);
 const standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
 const dk = d => new Date(d).toLocaleDateString('da-DK', {day:'numeric', month:'long', year:'numeric'});
-const secRef = (c, s) => `k${c.num}-` + (s.num ? s.num : s.title.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-'));
+const secRef = (c, s) => (secById[s.id] && secById[s.id].link) ? s.id : `k${c.num}-` + (s.num ? s.num : s.title.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-'));
 const newId = () => { const d = new Date(), p = n => String(n).padStart(2,'0'); return `B-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${Math.random().toString(36).slice(2,8).toUpperCase()}`; };
 
 /* ---------- Velkomstside ---------- */
@@ -560,7 +569,7 @@ document.addEventListener('selectionchange', () => {
   else if (!txt) { clearTimeout(selHideT); selHideT = setTimeout(() => { const s2 = document.getSelection(); if (!s2 || !s2.toString().trim()) { lastSel = ''; selBtn.textContent = '✎ Skriv bemærkning'; } }, 4000); }
 });
 function showFab(){ selBtn.hidden = !(main.querySelector('#body') && main.querySelector('.notebar') && !document.querySelector('.noteform')); }
-function openFromSel(){ const m = location.hash.match(/#\/s\/([^/?]+)/); if (m) openNote(decodeURIComponent(m[1]), null, lastSel); }
+function openFromSel(){ const b = main.querySelector('.notebar [data-note]'); if (b) openNote(b.dataset.note, null, lastSel); }
 selBtn.addEventListener('mousedown', e => e.preventDefault());
 selBtn.addEventListener('touchstart', e => { e.preventDefault(); openFromSel(); }, {passive: false});
 selBtn.addEventListener('click', openFromSel);
@@ -578,13 +587,13 @@ function openNote(secId, noteId, cit){
     let ctx, host;
     if (noteId) {
       if (!n) { toast('Bemærkningen findes ikke længere.'); return; }
-      ctx = `Kapitel ${n.kapitel}, ${n.afsnitsnummer ? n.afsnitsnummer + ' ' : ''}${n.afsnitstitel}`;
+      ctx = `${n.kapitel ? 'Kapitel ' + n.kapitel + ', ' : ''}${n.afsnitsnummer ? n.afsnitsnummer + ' ' : ''}${n.afsnitstitel}`;
       host = main.querySelector(`li[data-id="${n.id}"]`);
     } else {
       const r = secById[secId] || secById[String(secId).normalize('NFC')];
       if (!r) { toast('Afsnittet kunne ikke findes. Genindlæs siden, og prøv igen.', 5000); return; }
       secId = r.s.id;
-      ctx = `Kapitel ${r.c.num}, ${r.s.num ? r.s.num + ' ' : ''}${r.s.title}`;
+      ctx = `${r.c.num ? 'Kapitel ' + r.c.num + ', ' : ''}${r.s.num ? r.s.num + ' ' : ''}${r.s.title}`;
       host = main.querySelector('.notebar');
     }
     if (!host) { toast('Feltet kunne ikke åbnes her. Gå til afsnittet, og prøv igen.', 5000); return; }
@@ -669,7 +678,7 @@ function notesPage(){
   const notes = loadNotes().sort((a,b) => b.oprettet.localeCompare(a.oprettet));
   const unsent = notes.filter(x => !x.sendt), sent = notes.filter(x => x.sendt);
   const item = n => `<li data-id="${n.id}">
-      <div class="nh"><span class="ty">${esc(n.type)}</span><a href="#/s/${esc(n.afsnit_id)}">Kapitel ${n.kapitel}, ${n.afsnitsnummer ? esc(n.afsnitsnummer)+' ' : ''}${esc(n.afsnitstitel)}</a><span>v${esc(n.haandbogsversion)}, ${dk(n.oprettet)}</span><span class="st ${n.sendt?'sent':'new'}">${n.sendt ? 'Sendt ' + dk(n.sendt) : 'Ikke sendt'}</span></div>
+      <div class="nh"><span class="ty">${esc(n.type)}</span><a href="${noteLink(n)}">${n.kapitel ? `Kapitel ${n.kapitel}, ` : ``}${n.afsnitsnummer ? esc(n.afsnitsnummer)+' ' : ''}${esc(n.afsnitstitel)}</a><span>v${esc(n.haandbogsversion)}, ${dk(n.oprettet)}</span><span class="st ${n.sendt?'sent':'new'}">${n.sendt ? 'Sendt ' + dk(n.sendt) : 'Ikke sendt'}</span></div>
       ${n.citat ? `<blockquote>${esc(n.citat)}</blockquote>` : ''}<p>${esc(n.bemaerkning)}</p>
       <div class="na"><button type="button" class="btn ghost small" data-edit="${n.id}">Ret</button><button type="button" class="btn ghost small" data-del="${n.id}">Slet</button></div></li>`;
   const nm = esc(store.get(K_NAME) || '');
